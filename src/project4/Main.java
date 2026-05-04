@@ -60,10 +60,52 @@ package project4;
  * 
  */
 public class Main {
+	private static final int[] CHECKPOINTS = {1000, 10000, 100000, 1000000};
+	private static final int NUMBER_OF_RUNS = 10;
+	private static final String OUTPUT_FOLDER = "output";
 
 	public static void main(String[] args) {
-		Board mainBoard = new Board();
-		TurnEngine tg = new TurnEngine(mainBoard);	
-		tg.turn();
+		System.out.println("Programming Project 4 - Monopoly Simulation");
+		System.out.println("Team: SuperCoolTeam");
+		System.out.println();
+
+		JailExitStrategyA strategyA = new JailExitStrategyA();
+		JailExitStrategyB strategyB = new JailExitStrategyB();
+
+		runStrategy(strategyA.getName(), strategyA.triesForDoubles());
+		runStrategy(strategyB.getName(), strategyB.triesForDoubles());
+
+		System.out.println();
+		System.out.println("All simulations complete.");
+		System.out.println("CSV files were saved in the '" + OUTPUT_FOLDER + "' folder.");
+	}
+
+	/**
+	 * Runs all simulations for one jail strategy.
+	 *
+	 * @param strategyName the name of the strategy
+	 * @param tryForDoubles true if the strategy tries for doubles in jail
+	 */
+	private static void runStrategy(String strategyName, boolean tryForDoubles) {
+		System.out.println("Running " + strategyName + "...");
+
+		for (int runNumber = 1; runNumber <= NUMBER_OF_RUNS; runNumber++) {
+			Simulation simulation = new Simulation(strategyName, tryForDoubles, runNumber);
+
+			int previousCheckpoint = 0;
+
+			for (int checkpoint : CHECKPOINTS) {
+				int turnsToRun = checkpoint - previousCheckpoint;
+
+				simulation.runTurns(turnsToRun);
+				simulation.saveResults(checkpoint, OUTPUT_FOLDER);
+
+				if (checkpoint == 100000 || checkpoint == 1000000) {
+					simulation.printTopSquares(checkpoint);
+				}
+
+				previousCheckpoint = checkpoint;
+			}
+		}
 	}
 }
