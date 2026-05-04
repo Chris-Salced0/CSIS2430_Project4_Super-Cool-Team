@@ -10,10 +10,8 @@ This project, written in Java, simulates the classic Monopoly board game (2018 U
 
 ## How to Run
 
-- Open the project in your Java IDE
+- Open the project in a Java IDE
 - Navigate to Main.java
-- To run Strategy A: ensure TurnEngine is initialized with JailExitStrategyA()
-- To run Strategy B: replace with JailExitStrategyB()
 - Run Main.java
 
 
