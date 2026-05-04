@@ -17,92 +17,57 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 /**
- * Runs the Monopoly simulations and saves the results.
+ * Represents one Monopoly simulation run.
  * 
- * This class runs both jail strategies. It runs each strategy 10 times and saves
- * the board results at each required turn amount.
+ * This class owns one board and one turn engine. It can run turns, save results,
+ * and print the top landed-on squares.
  */
 public class Simulation {
-
-	private static final int[] CHECKPOINTS = {1000, 10000, 100000, 1000000};
-	private static final int NUMBER_OF_RUNS = 10;
-	private static final String OUTPUT_FOLDER = "output";
+	private Board board;
+	private TurnEngine engine;
+	private String strategyName;
+	private int runNumber;
 
 	/**
-	 * Runs the full simulation from this class.
+	 * Creates one simulation.
 	 *
-	 * @param args command-line arguments
+	 * @param strategyName the name of the jail strategy
+	 * @param tryForDoubles true if the player tries for doubles in jail
+	 * @param runNumber the run number
 	 */
-	public static void main(String[] args) {
-		runAllSimulations();
+	public Simulation(String strategyName, boolean tryForDoubles, int runNumber) {
+		board = new Board();
+		engine = new TurnEngine(board, tryForDoubles);
+		this.strategyName = strategyName;
+		this.runNumber = runNumber;
 	}
 
 	/**
-	 * Runs all simulations for Strategy A and Strategy B.
-	 */
-	public static void runAllSimulations() {
-		System.out.println("Programming Project 4 - Monopoly Simulation");
-		System.out.println("Team: SuperCoolTeam");
-		System.out.println();
-
-		JailExitStrategyA strategyA = new JailExitStrategyA();
-		JailExitStrategyB strategyB = new JailExitStrategyB();
-
-		runStrategy(strategyA.getName(), strategyA.triesForDoubles());
-		runStrategy(strategyB.getName(), strategyB.triesForDoubles());
-
-		System.out.println();
-		System.out.println("All simulations complete.");
-		System.out.println("CSV files were saved in the '" + OUTPUT_FOLDER + "' folder.");
-	}
-
-	/**
-	 * Runs one jail strategy for all 10 runs.
+	 * Runs the simulation for the given number of turns.
 	 *
-	 * @param strategyName the name of the strategy
-	 * @param tryForDoubles true if the strategy tries to roll doubles in jail
+	 * @param turns the number of turns to run
 	 */
-	private static void runStrategy(String strategyName, boolean tryForDoubles) {
-		System.out.println("Running " + strategyName + "...");
-
-		for (int runNumber = 1; runNumber <= NUMBER_OF_RUNS; runNumber++) {
-			Board board = new Board();
-			TurnEngine engine = new TurnEngine(board, tryForDoubles);
-
-			int previousCheckpoint = 0;
-
-			for (int checkpoint : CHECKPOINTS) {
-				int turnsToRun = checkpoint - previousCheckpoint;
-
-				for (int i = 0; i < turnsToRun; i++) {
-					engine.turn();
-				}
-
-				saveResults(board, strategyName, runNumber, checkpoint);
-				printShortSummary(board, strategyName, runNumber, checkpoint);
-
-				previousCheckpoint = checkpoint;
-			}
+	public void runTurns(int turns) {
+		for (int i = 0; i < turns; i++) {
+			engine.turn();
 		}
 	}
 
 	/**
-	 * Saves the current board results into a CSV file.
+	 * Saves the board results to a CSV file.
 	 *
-	 * @param board the board with the landing counts
-	 * @param strategyName the strategy being used
-	 * @param runNumber the current run number
-	 * @param totalTurns the number of turns completed
+	 * @param totalTurns the total turns completed so far
+	 * @param outputFolder the folder where results are saved
 	 */
-	private static void saveResults(Board board, String strategyName, int runNumber, int totalTurns) {
-		File folder = new File(OUTPUT_FOLDER);
+	public void saveResults(int totalTurns, String outputFolder) {
+		File folder = new File(outputFolder);
 
 		if (!folder.exists()) {
 			folder.mkdirs();
 		}
 
 		String cleanStrategyName = strategyName.replace(" ", "_").replace("-", "");
-		String fileName = OUTPUT_FOLDER + "/" + cleanStrategyName + "_Run" + runNumber + "_" + totalTurns + ".csv";
+		String fileName = outputFolder + "/" + cleanStrategyName + "_Run" + runNumber + "_" + totalTurns + ".csv";
 
 		try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
 			writer.println("Strategy,Run,Turns,Index,Square,Type,Count,Percentage");
@@ -121,24 +86,17 @@ public class Simulation {
 						percentage);
 			}
 		} catch (IOException e) {
-			System.out.println("Error saving file: " + fileName);
+			System.out.println("Could not save results file.");
 			System.out.println(e.getMessage());
 		}
 	}
 
 	/**
-	 * Prints the top 5 landed-on squares for a run.
+	 * Prints the top 5 landed-on squares.
 	 *
-	 * @param board the board with the landing counts
-	 * @param strategyName the strategy being used
-	 * @param runNumber the current run number
-	 * @param totalTurns the number of turns completed
+	 * @param totalTurns the total turns completed so far
 	 */
-	private static void printShortSummary(Board board, String strategyName, int runNumber, int totalTurns) {
-		System.out.println();
-		System.out.println(strategyName + " | Run " + runNumber + " | " + totalTurns + " turns");
-		System.out.println("Top 5 landed-on squares:");
-
+	public void printTopSquares(int totalTurns) {
 		Square[] sortedSquares = board.board.toArray(new Square[0]);
 
 		for (int i = 0; i < sortedSquares.length - 1; i++) {
@@ -150,6 +108,10 @@ public class Simulation {
 				}
 			}
 		}
+
+		System.out.println();
+		System.out.println(strategyName + " | Run " + runNumber + " | " + totalTurns + " turns");
+		System.out.println("Top 5 landed-on squares:");
 
 		for (int i = 0; i < 5; i++) {
 			Square square = sortedSquares[i];
@@ -164,12 +126,12 @@ public class Simulation {
 	}
 
 	/**
-	 * Makes text safe to put in a CSV file.
+	 * Makes text safe for a CSV file.
 	 *
 	 * @param value the text being written
 	 * @return the CSV-safe text
 	 */
-	private static String escapeCsv(String value) {
+	private String escapeCsv(String value) {
 		if (value.contains(",") || value.contains("\"")) {
 			value = value.replace("\"", "\"\"");
 			return "\"" + value + "\"";
