@@ -78,7 +78,7 @@ public class Board {
 	//Gets index of any square name on the board.
 	public int indexOf(String name) {
 		for(int i = 0; i < board.size(); i++) {
-			if(board.get(i).name == name) {
+			if(board.get(i).name.equals(name)) {
 				return i;
 			} 
 		}
