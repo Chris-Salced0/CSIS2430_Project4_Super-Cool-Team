@@ -1,196 +1,156 @@
-==================================================
-MonopolySimulation (Main Controller)
-==================================================
+# Monopoly Simulation Pseudocode
 
-FUNCTION runAllSimulations()
+## Main
 
-    FOR EACH strategy IN [StrategyA, StrategyB]
+FOR each strategy:
+    FOR run = 1 to 10:
+        create Simulation(strategy)
 
-        FOR simulation = 1 TO 10
+        previousCheckpoint = 0
 
-            CALL resetGame(strategy)
+        FOR each checkpoint:
+            turnsToRun = checkpoint - previousCheckpoint
+            simulation.runTurns(turnsToRun)
+            simulation.saveResults()
 
-            FOR turn = 1 TO 1,000,000
+            IF checkpoint >= 100000:
+                print top squares
 
-                CALL turnEngine.simulateTurn()
+            previousCheckpoint = checkpoint
 
-                IF turn == 1,000 OR 10,000 OR 100,000 OR 1,000,000
-                    CALL outputResults(strategy, simulation, turn)
+---
 
-            END FOR
+## Simulation
 
-        END FOR
+FUNCTION runTurns(turns):
+    LOOP turns times:
+        engine.turn()
 
-    END FOR
+---
 
-END FUNCTION
+## TurnEngine
 
+FUNCTION turn():
 
-FUNCTION resetGame(strategy)
-
-    CREATE new Player
-    CREATE new Board
-    CREATE new Deck AS chanceDeck
-    CREATE new Deck AS communityDeck
-
-    INITIALIZE both decks (shuffle cards)
-
-    CREATE TurnEngine WITH:
-        player
-        board
-        chanceDeck
-        communityDeck
-        strategy
-
-END FUNCTION
-
-
-FUNCTION outputResults(strategy, simulation, turn)
-
-    PRINT strategy, simulation number, turn count
-
-    FOR EACH square IN board
-
-        count = square.landCount
-        percentage = (count / turn) * 100
-
-        PRINT square.name, count, percentage
-
-    END FOR
-
-END FUNCTION
-
-
-
-==================================================
-TurnEngine (Core Game Logic)
-==================================================
-
-FUNCTION simulateTurn()
-
-    IF player.inJail == TRUE
-        IF handleJail() == FALSE
-            RETURN
-
-    SET doublesCount = 0
-
-    REPEAT
-
-        roll1 = RANDOM(1–6)
-        roll2 = RANDOM(1–6)
-        steps = roll1 + roll2
-
-        IF roll1 == roll2
-            doublesCount = doublesCount + 1
-        ELSE
-            doublesCount = 0
-
-        IF doublesCount == 3
-            CALL sendToJail()
-            RETURN
-
-        CALL movePlayer(steps)
-
-        CALL resolveSquare()
-
-    UNTIL roll1 != roll2
-
-END FUNCTION
-
-
-
-FUNCTION movePlayer(steps)
-
-    player.position = (player.position + steps) MOD 40
-
-END FUNCTION
-
-
-
-FUNCTION resolveSquare()
-
-    square = board.getSquare(player.position)
-
-    IF square IS GoToJailSquare
-        CALL sendToJail()
+    IF jail == true:
+        handleJailTurn()
+        increment landCount
+        increment totalMoves
         RETURN
 
-    ELSE IF square IS ChanceSquare
-        card = chanceDeck.drawCard()
-        CALL applyCard(card)
+    doubleRoll = 0
+    turnOver = false
 
-    ELSE IF square IS CommunityChestSquare
-        card = communityDeck.drawCard()
-        CALL applyCard(card)
+    WHILE turnOver == false:
 
-    END IF
+        roll dice
 
-    CALL board.incrementLanding(player.position)
+        IF doubles:
+            doubleRoll++
+        ELSE:
+            turnOver = true
 
-END FUNCTION
+        IF doubleRoll == 3:
+            sendToJail()
+            turnOver = true
+        ELSE:
+            moveForward(sum)
+            resolveCurrentSquare()
 
+            IF jail == true:
+                turnOver = true
 
+    increment landCount
+    increment totalMoves
 
-FUNCTION applyCard(card)
+---
 
-    IF card.type == "MOVE"
-        player.position = card.targetPosition
+## Jail Handling
 
-        IF board.getSquare(player.position) IS GoToJailSquare
-            CALL sendToJail()
-            RETURN
+FUNCTION handleJailTurn():
 
-    ELSE IF card.type == "GO_TO_JAIL"
-        CALL sendToJail()
+    IF player has jail card:
+        useJailCard()
+        rollAndMoveAfterLeavingJail()
         RETURN
 
-    ELSE IF card.type == "GET_OUT_OF_JAIL"
-        player.getOutOfJailCards = player.getOutOfJailCards + 1
+    IF tryForDoublesStrategy == false:
+        leave jail
+        rollAndMoveAfterLeavingJail()
+        RETURN
 
-    END IF
+    jailAttempts++
 
-END FUNCTION
+    roll dice
 
+    IF doubles:
+        leave jail
+        moveForward()
+        resolveCurrentSquare()
 
+    ELSE IF jailAttempts >= 3:
+        leave jail
+        moveForward()
+        resolveCurrentSquare()
 
-FUNCTION handleJail()
+---
 
-    IF player.getOutOfJailCards > 0
-        player.getOutOfJailCards = player.getOutOfJailCards - 1
-        player.inJail = FALSE
-        RETURN TRUE
+## Movement
 
-    IF strategy IS StrategyA
-        player.inJail = FALSE
-        RETURN TRUE
+FUNCTION moveForward(steps):
+    position = (position + steps) % 40
 
-    ELSE IF strategy IS StrategyB
+---
 
-        player.jailTurns = player.jailTurns + 1
+## Resolve Square
 
-        roll1 = RANDOM(1–6)
-        roll2 = RANDOM(1–6)
+FUNCTION resolveCurrentSquare():
 
-        IF roll1 == roll2
-            player.inJail = FALSE
-            RETURN TRUE
+    keepResolving = true
 
-        IF player.jailTurns == 3
-            player.inJail = FALSE
-            RETURN TRUE
+    WHILE keepResolving:
 
-        RETURN FALSE
+        keepResolving = false
+        currentSquare = board[position]
 
-    END IF
+        IF "Go To Jail":
+            sendToJail()
 
-END FUNCTION
+        ELSE IF "Chance":
+            card = drawChanceCard()
+            resolveCard(card)
 
+        ELSE IF "Community":
+            card = drawCommunityCard()
+            resolveCard(card)
 
+        IF player moved again:
+            keepResolving = true
 
-FUNCTION sendToJail()
+---
 
-    player.position = JAIL_INDEX
-    player.inJail = TRUE
-    player.jailTurns = 0
+## Card Handling
 
-END FUNCTION
+FUNCTION resolveCard(card):
+
+    IF type == "Other":
+        discard
+
+    IF type == "Hold":
+        store jail card
+
+    IF type == "Jail":
+        sendToJail()
+
+    IF type == "Advance":
+        moveByCardName()
+        discard
+
+---
+
+## Send to Jail
+
+FUNCTION sendToJail():
+    position = jail index
+    jail = true
+    reset counters
